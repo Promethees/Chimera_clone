@@ -49,7 +49,7 @@ python "$SRC_DIR/model_chimera.py" --input "$DATA_DIR/structures" --input-json "
 
 # Run design_clone.py
 echo "Running design_clone.py..."
-echo "python $SRC_DIR/design_clone.py --input $DATA_DIR/chimera.pdb --output $DATA_DIR/clone_design.json"
-python "$SRC_DIR/design_clone.py" --input "$DATA_DIR/chimera.pdb" --output "$DATA_DIR/clone_design.json" 2>&1 | tee "$DATA_DIR/design_clone.log" && echo "Designed clone" || { echo "Clone design failed"; exit 1; }
+echo "python $SRC_DIR/design_clone.py --input $DATA_DIR/chimera.pdb --input-json $DATA_DIR/parsed.json --output $DATA_DIR/clone_design.json"
+python "$SRC_DIR/design_clone.py" --input "$DATA_DIR/chimera.pdb" --input-json "$DATA_DIR/parsed.json" --output "$DATA_DIR/clone_design.json" 2>&1 | tee "$DATA_DIR/design_clone.log" && echo "Designed clone" || { echo "Clone design failed"; exit 1; }
 
 echo "Pipeline completed"

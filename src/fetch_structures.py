@@ -1,77 +1,86 @@
-import json
 import os
+import json
 import argparse
-from Bio.PDB import PDBList
-from utils import write_json
+import logging
+import urllib.request
+from typing import List, Dict
+from config import DOMAIN_TO_PDB, STRUCTURES_DIR, PDB_EXT
 
-def fetch_structures(input_json, output_dir):
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
+
+def load_parsed_data(input_path: str) -> Dict:
     """
-    Fetch PDB files for domains listed in input JSON and save to output directory.
-    
+    Load parsed data from JSON file.
+
     Args:
-        input_json (str): Path to input JSON file (e.g., parsed.json)
-        output_dir (str): Directory to save PDB files
-    
+        input_path: Path to input JSON file.
+
     Returns:
-        dict: Metadata about downloaded PDB files
+        Dictionary containing parsed data.
+
+    Raises:
+        ValueError: If JSON file is invalid or missing required fields.
     """
     try:
-        # Read input JSON
-        print(f"Reading input JSON: {input_json}")
-        with open(input_json) as f:
+        with open(input_path) as f:
             data = json.load(f)
-        domains = data.get("domains", [])
-        if not domains:
-            raise ValueError("No domains found in input JSON")
-
-        # Map domains to PDB IDs
-        pdb_map = {"CaM": "1CLL", "BLA": "1ERQ"}
-        pdbl = PDBList()
-        pdb_files = []
-
-        # Create output directory
-        os.makedirs(output_dir, exist_ok=True)
-
-        # Download PDB files
-        for domain in domains:
-            pdb_id = pdb_map.get(domain)
-            if not pdb_id:
-                raise ValueError(f"No PDB ID mapped for domain: {domain}")
-            print(f"Downloading PDB {pdb_id} for domain {domain}")
-            # Bio.PDB saves to <output_dir>/pdb<xxxx>.ent; we rename to <xxxx>.pdb
-            pdbl.retrieve_pdb_file(pdb_id, pdir=output_dir, file_format="pdb")
-            src_file = os.path.join(output_dir, f"pdb{pdb_id.lower()}.ent")
-            dest_file = os.path.join(output_dir, f"{pdb_id}.pdb")
-            if os.path.exists(src_file):
-                os.rename(src_file, dest_file)
-                pdb_files.append(dest_file)
-                print(f"Saved PDB file: {dest_file}")
-            else:
-                raise IOError(f"Failed to download PDB {pdb_id}")
-
-        # Return metadata
-        result = {
-            "domains": domains,
-            "pdb_files": [os.path.basename(f) for f in pdb_files]
-        }
-        print(f"Fetched structures: {result}")
-        return result
+        if "domains" not in data:
+            raise ValueError("Missing 'domains' in input JSON")
+        logger.info(f"Loaded parsed data from {input_path}")
+        return data
     except Exception as e:
-        print(f"Error fetching structures: {e}")
-        raise
+        logger.error(f"Error loading JSON: {e}")
+        raise ValueError(f"Failed to load JSON: {e}")
+
+def fetch_pdb_files(domains: List[str], output_dir: str) -> List[str]:
+    """
+    Fetch PDB files for given domains and save to output directory using urllib.
+
+    Args:
+        domains: List of domain names.
+        output_dir: Directory to save PDB files.
+
+    Returns:
+        List of paths to saved PDB files.
+
+    Raises:
+        ValueError: If PDB fetch fails or domain is unknown.
+    """
+    try:
+        os.makedirs(output_dir, exist_ok=True)
+        pdb_files = []
+        for domain in domains:
+            pdb_id = DOMAIN_TO_PDB.get(domain)
+            if not pdb_id:
+                raise ValueError(f"Unknown domain: {domain}")
+            output_path = os.path.join(output_dir, f"{pdb_id}{PDB_EXT}")
+            url = f"https://files.rcsb.org/download/{pdb_id}.pdb"
+            urllib.request.urlretrieve(url, output_path)
+            if not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
+                raise ValueError(f"Failed to save PDB file: {output_path}")
+            pdb_files.append(output_path)
+            logger.info(f"Fetched PDB {pdb_id} for {domain} to {output_path}")
+        return pdb_files
+    except Exception as e:
+        logger.error(f"Error fetching PDB files: {e}")
+        raise ValueError(f"Failed to fetch PDB files: {e}")
+
+def main(args: argparse.Namespace) -> None:
+    """Main function to fetch PDB structures."""
+    parsed_data = load_parsed_data(args.input)
+    fetch_pdb_files(parsed_data["domains"], args.output)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Fetch PDB structures for domains")
-    parser.add_argument('--input', required=True, help="Input JSON file (e.g., parsed.json)")
-    parser.add_argument('--output', required=True, help="Output directory for PDB files")
+    parser.add_argument("--input", required=True, help="Input JSON file (e.g., parsed.json)")
+    parser.add_argument("--output", required=True, help="Output directory for PDB files")
     args = parser.parse_args()
 
     try:
-        result = fetch_structures(args.input, args.output)
-        # Optionally save metadata to JSON (not required by pipeline)
-        metadata_path = os.path.join(args.output, "structures_metadata.json")
-        write_json(result, metadata_path)
-        print("Fetch structures completed")
+        main(args)
+        logger.info("Structure fetching completed successfully")
     except Exception as e:
-        print(f"Error: {e}")
+        logger.error(f"Structure fetching failed: {e}")
         raise

@@ -1,125 +1,192 @@
 import os
 import json
 import argparse
+import logging
+from typing import List, Dict, Tuple
 import pymol.cmd as cmd
 from utils import write_json
+from config import DOMAIN_TO_PDB, DOMAIN_COLORS, PDB_EXT, PML_EXT
 
-def model_chimera(pdb_files, fusion_points, output_pdb):
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
+
+def load_pdb_files(input_dir: str) -> List[str]:
     """
-    Align PDB structures, assign distinct colors and chain IDs to each domain, and save a chimeric protein structure.
-    
+    Load PDB files from the input directory.
+
     Args:
-        pdb_files (list): List of PDB file paths
-        fusion_points (list): List of fusion point indices
-        output_pdb (str): Path to output PDB file
-    
+        input_dir: Directory containing PDB files.
+
     Returns:
-        dict: Metadata about the modeled structure
+        List of PDB file paths.
+
+    Raises:
+        ValueError: If no PDB files are found.
     """
-    try:
-        print("Initializing PyMOL")
-        cmd.reinitialize()
-        if not pdb_files:
-            raise ValueError("No PDB files provided")
+    pdb_files = [os.path.join(input_dir, f) for f in os.listdir(input_dir) if f.endswith(PDB_EXT)]
+    if not pdb_files:
+        raise ValueError(f"No PDB files found in {input_dir}")
+    logger.info(f"Found PDB files: {pdb_files}")
+    return sorted(pdb_files)
 
-        # Assign domain names and track CaM instances
-        domain_names = []
-        cam_count = 0
-        for pdb in pdb_files:
-            if "1CLL" in os.path.basename(pdb):
-                cam_count += 1
-                domain_names.append(f"CaM{cam_count}")
-            else:
-                domain_names.append("BLA")
+def assign_domain_names(pdb_files: List[str]) -> List[str]:
+    """
+    Assign domain names based on PDB file names.
 
-        # Load PDB files and assign chain IDs
-        for i, (pdb, domain) in enumerate(zip(pdb_files, domain_names)):
-            print(f"Loading PDB {pdb} as domain_{i} ({domain})")
-            cmd.load(pdb, f"domain_{i}")
-            # Assign unique chain ID (A, B, C, ...)
-            cmd.alter(f"domain_{i}", f"chain='{chr(65+i)}'")
+    Args:
+        pdb_files: List of PDB file paths.
 
-        # Align domains if multiple
-        if len(pdb_files) > 1:
-            print("Aligning domains")
-            for i in range(1, len(pdb_files)):
-                cmd.align(f"domain_{i}", "domain_0")
+    Returns:
+        List of domain names (e.g., ['CaM1', 'CaM2', 'BLA']).
+    """
+    domain_names = []
+    cam_count = 0
+    for pdb in pdb_files:
+        pdb_name = os.path.basename(pdb)
+        for domain, pdb_id in DOMAIN_TO_PDB.items():
+            if pdb_id in pdb_name:
+                if domain == "CaM":
+                    cam_count += 1
+                    domain_names.append(f"CaM{cam_count}")
+                else:
+                    domain_names.append(domain)
+                break
+    logger.info(f"Assigned domain names: {domain_names}")
+    return domain_names
 
-        # Assign distinct colors to each domain
-        colors = ["cyan", "green", "red"]  # CaM1: cyan, CaM2: green, BLA: red
+def load_and_align_domains(pdb_files: List[str], domain_names: List[str]) -> None:
+    """
+    Load PDB files into PyMOL, assign chain IDs, align domains, and color them.
+
+    Args:
+        pdb_files: List of PDB file paths.
+        domain_names: List of domain names.
+    """
+    cmd.reinitialize()
+    for i, (pdb, domain) in enumerate(zip(pdb_files, domain_names)):
+        cmd.load(pdb, f"domain_{i}")
+        cmd.alter(f"domain_{i}", f"chain='{chr(65+i)}'")
+        color = DOMAIN_COLORS[i % len(DOMAIN_COLORS)]
+        cmd.color(color, f"domain_{i}")
+        logger.info(f"Loaded {pdb} as domain_{i} ({domain}), chain {chr(65+i)}, colored {color}")
+    
+    if len(pdb_files) > 1:
+        for i in range(1, len(pdb_files)):
+            cmd.align(f"domain_{i}", "domain_0")
+        logger.info("Aligned domains")
+
+def save_chimera_structure(output_pdb: str) -> None:
+    """
+    Save the chimeric structure to a PDB file.
+
+    Args:
+        output_pdb: Path to output PDB file.
+
+    Raises:
+        IOError: If saving fails.
+    """
+    cmd.select("all")
+    cmd.save(output_pdb, "all")
+    if not os.path.exists(output_pdb) or os.path.getsize(output_pdb) == 0:
+        raise IOError(f"Failed to save PDB file: {output_pdb}")
+    logger.info(f"Saved chimeric structure to {output_pdb}")
+
+def generate_pymol_script(output_pdb: str, domain_names: List[str]) -> str:
+    """
+    Generate a PyMOL script for coloring and labeling domains.
+
+    Args:
+        output_pdb: Path to PDB file.
+        domain_names: List of domain names.
+
+    Returns:
+        Path to the generated PyMOL script.
+    """
+    pml_file = os.path.splitext(output_pdb)[0] + PML_EXT
+    with open(pml_file, "w") as f:
+        f.write(f"load {os.path.basename(output_pdb)}\n")
         for i, domain in enumerate(domain_names):
-            cmd.color(colors[i % len(colors)], f"domain_{i}")
-            print(f"Colored domain_{i} ({domain}) as {colors[i % len(colors)]}")
+            chain = chr(65+i)
+            color = DOMAIN_COLORS[i % len(DOMAIN_COLORS)]
+            f.write(f"select {domain}, chain {chain}\n")
+            f.write(f"color {color}, {domain}\n")
+            f.write(f"center {domain}\n")
+            f.write(f"label {domain} and name CA, '{domain}'\n")
+        f.write("show cartoon\n")
+        f.write("set cartoon_fancy_helices, 1\n")
+        f.write("set cartoon_transparency, 0.2\n")
+        f.write("show surface\n")
+        f.write("set transparency, 0.7\n")
+        f.write("bg_color white\n")
+        f.write("zoom\n")
+    logger.info(f"Saved PyMOL script to {pml_file}")
+    return pml_file
 
-        # Select all atoms for saving
-        cmd.select("all")
-        print(f"Saving chimeric structure to {output_pdb}")
-        cmd.save(output_pdb, "all")
+def model_chimera(pdb_files: List[str], fusion_points: List[int], output_pdb: str) -> Dict:
+    """
+    Model a chimeric protein structure using PyMOL.
 
-        # Verify output file
-        if not os.path.exists(output_pdb) or os.path.getsize(output_pdb) == 0:
-            raise IOError(f"Failed to save PDB file: {output_pdb}")
+    Args:
+        pdb_files: List of PDB file paths.
+        fusion_points: List of fusion point indices.
+        output_pdb: Path to output PDB file.
 
-        # Generate PyMOL script for enhanced visualization
-        pml_file = os.path.splitext(output_pdb)[0] + "_color.pml"
-        with open(pml_file, "w") as f:
-            f.write(f"load {os.path.basename(output_pdb)}\n")
-            for i, (domain, color) in enumerate(zip(domain_names, colors)):
-                chain = chr(65+i)
-                f.write(f"select {domain}, chain {chain}\n")
-                f.write(f"color {color}, {domain}\n")
-                # Add label at the center of mass of the domain
-                f.write(f"center {domain}\n")
-                f.write(f"label {domain} and name CA, '{domain}'\n")
-            f.write("show cartoon\n")
-            f.write("set cartoon_fancy_helices, 1\n")
-            f.write("set cartoon_transparency, 0.2\n")
-            f.write("show surface\n")
-            f.write("set transparency, 0.7\n")
-            f.write("bg_color white\n")
-            f.write("zoom\n")
-        print(f"Saved PyMOL coloring script to {pml_file}")
+    Returns:
+        Metadata dictionary.
+    """
+    domain_names = assign_domain_names(pdb_files)
+    load_and_align_domains(pdb_files, domain_names)
+    save_chimera_structure(output_pdb)
+    pml_file = generate_pymol_script(output_pdb, domain_names)
+    
+    return {
+        "pdb_files": [os.path.basename(f) for f in pdb_files],
+        "domains": domain_names,
+        "fusion_points": fusion_points,
+        "output_pdb": os.path.basename(output_pdb),
+        "color_script": os.path.basename(pml_file)
+    }
 
-        # Return metadata
-        result = {
-            "pdb_files": [os.path.basename(f) for f in pdb_files],
-            "domains": domain_names,
-            "fusion_points": fusion_points,
-            "output_pdb": os.path.basename(output_pdb),
-            "color_script": os.path.basename(pml_file)
-        }
-        print(f"Modeled chimera: {result}")
-        return result
-    except Exception as e:
-        print(f"Error modeling chimera: {e}")
-        raise
+def load_fusion_points(input_json: str) -> List[int]:
+    """
+    Load fusion points from a JSON file.
+
+    Args:
+        input_json: Path to input JSON file.
+
+    Returns:
+        List of fusion points.
+
+    Raises:
+        ValueError: If fusion points are invalid.
+    """
+    with open(input_json) as f:
+        data = json.load(f)
+    fusion_points = data.get("fusion_points", [])
+    if not fusion_points or len(fusion_points) != 2:
+        raise ValueError(f"Invalid or missing fusion_points in {input_json}")
+    logger.info(f"Loaded fusion points: {fusion_points}")
+    return fusion_points
+
+def main(args: argparse.Namespace) -> None:
+    """Main function to model chimeric structure."""
+    pdb_files = load_pdb_files(args.input)
+    fusion_points = load_fusion_points(args.input_json)
+    result = model_chimera(pdb_files, fusion_points, args.output)
+    metadata_path = os.path.splitext(args.output)[0] + "_metadata.json"
+    write_json(result, metadata_path)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Model chimeric protein structure")
-    parser.add_argument('--input', required=True, help="Directory with PDB files")
-    parser.add_argument('--input-json', required=True, help="Input JSON file with fusion points (e.g., parsed.json)")
-    parser.add_argument('--output', required=True, help="Output PDB file")
+    parser.add_argument("--input", required=True, help="Directory with PDB files")
+    parser.add_argument("--input-json", required=True, help="Input JSON file with fusion points")
+    parser.add_argument("--output", required=True, help="Output PDB file")
     args = parser.parse_args()
 
     try:
-        print(f"Reading PDB files from: {args.input}")
-        pdb_files = [os.path.join(args.input, f) for f in os.listdir(args.input) if f.endswith('.pdb')]
-        if not pdb_files:
-            raise ValueError(f"No PDB files found in {args.input}")
-        print(f"Found PDB files: {pdb_files}")
-
-        print(f"Reading fusion points from: {args.input_json}")
-        with open(args.input_json) as f:
-            data = json.load(f)
-        fusion_points = data.get("fusion_points", [])
-        if not fusion_points or len(fusion_points) != 2:
-            raise ValueError(f"Invalid or missing fusion_points in {args.input_json}")
-
-        result = model_chimera(pdb_files, fusion_points, args.output)
-        # Save metadata to JSON
-        metadata_path = os.path.splitext(args.output)[0] + "_metadata.json"
-        write_json(result, metadata_path)
-        print("Modeling completed")
+        main(args)
+        logger.info("Modeling completed successfully")
     except Exception as e:
-        print(f"Error: {e}")
+        logger.error(f"Modeling failed: {e}")
         raise
