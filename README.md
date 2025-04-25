@@ -190,8 +190,12 @@ We shall go back to `chimera_clone` environment to copy it environment configura
 conda activate chimera_clone
 conda export > environment.yml
 docker build -t chimera_clone -f docker/Dockerfile .
-docker run -it chimera_clone
 ```
+
+Run this script so that output generated in the `Docker` will be transferred to host OS's corresponding directory.
+```bash
+docker run -v $(pwd)/data:/app/data chimera_clone
+``` 
 
 ## Project Context
 
@@ -201,4 +205,4 @@ This setup supports:
 - **Function Inference**: Use ESM-2 for sequence-based predictions, Rosetta for structural modeling.
 - **Biosensor Design**: Engineer chimeras (e.g., nanoCLAMP-linker-CaM-BP) for calcium or analyte detection with Rosetta, AutoDock, and GROMACS.
 
-For questions, open an issue in the repository or contact \[your-email\].
+For questions, open an issue in the repository or contact \[tqmthong@gmail.com\].
