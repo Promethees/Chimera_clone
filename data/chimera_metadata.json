@@ -1,0 +1,16 @@
+{
+    "pdb_files": [
+        "1CLL.pdb",
+        "1ERQ.pdb"
+    ],
+    "domains": [
+        "CaM1",
+        "BLA"
+    ],
+    "fusion_points": [
+        41,
+        197
+    ],
+    "output_pdb": "chimera.pdb",
+    "color_script": "chimera.pml"
+}

@@ -1,0 +1,5 @@
+2025-04-25 09:58:02,629 - INFO - Loaded parsed data from /app/data/parsed.json
+2025-04-25 09:58:02,679 - INFO - Fetched PDB 1CLL for CaM to /app/data/structures/1CLL.pdb
+2025-04-25 09:58:02,729 - INFO - Fetched PDB 1CLL for CaM to /app/data/structures/1CLL.pdb
+2025-04-25 09:58:02,780 - INFO - Fetched PDB 1ERQ for BLA to /app/data/structures/1ERQ.pdb
+2025-04-25 09:58:02,780 - INFO - Structure fetching completed successfully

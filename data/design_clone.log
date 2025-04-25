@@ -1,0 +1,10 @@
+2025-04-25 09:58:03,304 - INFO - Loaded domains: ['CaM', 'CaM', 'BLA'], fusion_points: [41, 197]
+2025-04-25 09:58:03,341 - INFO - Extracted sequence for chain A: LTEEQIAEFKEAFSLFDKDG... (length: 144)
+2025-04-25 09:58:03,344 - INFO - Extracted sequence for chain B: HPETLVKVKDAEDQLGARVG... (length: 263)
+2025-04-25 09:58:03,344 - INFO - Added segment for CaM (chain A, residues 1-41): LTEEQIAEFKEAFSLFDKDG... (length: 41)
+2025-04-25 09:58:03,344 - INFO - Added segment for CaM (chain B, residues 42-197): PMMSTFKVLLCGAVLSRVDA... (length: 156)
+2025-04-25 09:58:03,344 - INFO - Constructed chimeric sequence: LTEEQIAEFKEAFSLFDKDG... (length: 197)
+2025-04-25 09:58:03,344 - INFO - Back-translated DNA sequence: TTAACTGAAGAACAAATTGC... (length: 591)
+2025-04-25 09:58:03,344 - INFO - Designed primers: {'forward': 'TTAACTGAAGAACAAATTGC', 'reverse': 'ACGTAATAAAGGACCAGCAA'}
+2025-04-25 09:58:03,344 - INFO - Wrote JSON to /app/data/clone_design.json
+2025-04-25 09:58:03,344 - INFO - Clone design completed successfully
