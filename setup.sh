@@ -56,6 +56,7 @@ echo "Installing bioinformatics tools..."
 conda install -y hmmer muscle pymol-open-source snakemake
 sudo apt install -y autodock-vina
 conda install -y gromacs
+conda install alphafold
 
 # Install Rosetta (requires user-provided binary)
 if [ ! -d "/opt/rosetta" ]; then

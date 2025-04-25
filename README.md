@@ -95,6 +95,7 @@ Note: the following steps should be executed within `chimera_clone` environment,
    conda install -y hmmer muscle pymol-open-source snakemake
    sudo apt install -y autodock-vina
    conda install -y gromacs
+   conda install alphafold
    ```
 
 6. **Install Rosetta**:
@@ -121,24 +122,12 @@ Note: the following steps should be executed within `chimera_clone` environment,
      pip install torch --index-url https://download.pytorch.org/whl/cu121
      ```
 
-8. **Optional: AlphaFold2**:
-   - Install AlphaFold into conda environment:
-   ```bash
-   conda install phenix-project::alphafold
-   ```
-   - In environment.yml, add channel `phenix-project`
-   ```bash
-   git clone https://github.com/deepmind/alphafold.git
-   cd alphafold
-   conda env create -f environment.yml
-   ```
-
 ## Usage
 
 1. **Activate Environment**:
 
    ```bash
-   conda activate bioinformatics
+   conda activate chimera_clone
    ```
 
 2. **Test Setup**:
@@ -195,8 +184,13 @@ For a fully reproducible environment:
 sudo apt install -y docker.io
 sudo usermod -aG docker $USER
 newgrp docker
-docker build -t bioinformatics -f docker/Dockerfile .
-docker run -it bioinformatics
+```
+We shall go back to `chimera_clone` environment to copy it environment configurations to `docker`. Docker build scripts for `chimera_clone`
+```bash
+conda activate chimera_clone
+conda export > environment.yml
+docker build -t chimera_clone -f docker/Dockerfile .
+docker run -it chimera_clone
 ```
 
 ## Project Context
