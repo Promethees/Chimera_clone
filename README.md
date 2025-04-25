@@ -69,15 +69,18 @@ If you prefer manual setup or encounter issues, follow these steps:
    conda config --add channels bioconda
    conda config --add channels conda-forge
    conda config --add channels phenix-project
+   conda config --add channels https://conda.rosettacommons.org
    conda update -y conda
    ```
 
 3. **Create Conda Environment**:
 
    ```bash
-   conda create -n bioinformatics python=3.9
-   conda activate bioinformatics
+   conda create -n chimera_clone python=3.9
+   conda activate chimera_clone
    ```
+
+Note: the following steps should be executed within `chimera_clone` environment, in which the user@host section should look like this: ![(env)user@host](./graphics/env_user_host.png), instead of ![user@host](./graphics/user_host.png).
 
 4. **Install Python Libraries**:
 

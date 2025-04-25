@@ -30,19 +30,21 @@ if ! command -v conda &> /dev/null; then
     conda config --add channels defaults
     conda config --add channels bioconda
     conda config --add channels conda-forge
+    conda config --add channels phenix-project
+    conda config --add channels https://conda.rosettacommons.org
     conda update -y conda
 else
     echo "Miniconda already installed."
 fi
 
 # Create and activate Conda environment
-if ! conda env list | grep -q "bioinformatics"; then
-    echo "Creating Conda environment 'bioinformatics'..."
-    conda create -y -n bioinformatics python=3.9
+if ! conda env list | grep -q "chimera_clone"; then
+    echo "Creating Conda environment 'chimera_clone'..."
+    conda create -y -n chimera_clone python=3.9
 else
-    echo "Conda environment 'bioinformatics' already exists."
+    echo "Conda environment 'chimera_clone' already exists."
 fi
-source $HOME/miniconda3/bin/activate bioinformatics
+source $HOME/miniconda3/bin/activate chimera_clone
 
 # Install Python libraries
 echo "Installing Python libraries..."
@@ -58,11 +60,11 @@ conda install -y gromacs
 # Install Rosetta (requires user-provided binary)
 if [ ! -d "/opt/rosetta" ]; then
     echo "Rosetta installation requires an academic license."
-    echo "Please download rosetta_bin_linux_2024.01_bundle.tgz from https://www.rosettacommons.org/software/license-and-download"
-    read -p "Enter the full path to rosetta_bin_linux_2024.01_bundle.tgz: " ROSETTA_TAR
+    echo "Please download rosetta_bin_ubuntu_3.14_bundle.tar.bz2 from https://www.rosettacommons.org/software/license-and-download"
+    read -p "Enter the full path to rosetta_bin_ubuntu_3.14_bundle.tar.bz2: " ROSETTA_TAR
     if [ -f "$ROSETTA_TAR" ]; then
-        tar -xvzf "$ROSETTA_TAR"
-        sudo mv rosetta_bin_linux_2024.01 /opt/rosetta
+        tar -xjf "$ROSETTA_TAR"
+        sudo mv rosetta.binary.ubuntu.release-371/opt/rosetta
         echo 'export PATH=/opt/rosetta/main/source/bin:$PATH' >> ~/.bashrc
         source ~/.bashrc
     else
