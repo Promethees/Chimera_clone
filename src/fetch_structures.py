@@ -25,7 +25,7 @@ def fetch_structures(input_json, output_dir):
             raise ValueError("No domains found in input JSON")
 
         # Map domains to PDB IDs
-        pdb_map = {"CaM": "1CLL", "BLA": "1BTS"}
+        pdb_map = {"CaM": "1CLL", "BLA": "1ERQ"}
         pdbl = PDBList()
         pdb_files = []
 
