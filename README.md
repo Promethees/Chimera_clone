@@ -176,7 +176,7 @@ Note: the following steps should be executed within `chimera_clone` environment,
 - **Library Conflicts**: Create a new Conda environment or use Docker (see below).
 - **Ubuntu 24.04 Issues**: If packages fail, check Ubuntu’s updated repositories (`sudo apt update`).
 
-## Optional: Docker Setup
+4. **Docker Setup**
 
 For a fully reproducible environment:
 
