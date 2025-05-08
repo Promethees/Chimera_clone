@@ -192,10 +192,22 @@ conda export > environment.yml
 docker build -t chimera_clone -f docker/Dockerfile .
 ```
 
+## Note:
+After any change within our repository, we need to build the Docker again with to update
+```bash
+docker build -t chimera_clone -f docker/Dockerfile .
+```
+
 Run this script so that output generated in the `Docker` will be transferred to host OS's corresponding directory.
 ```bash
 docker run -v $(pwd)/data:/app/data chimera_clone
 ``` 
+
+Order of execution:
+ - `parsed_description.py` -> `parsed.json` is saved to `data` directory. 
+ - `fetch_structure.py` reads from `parsed.json` to retrieve protein `.pdb` files to save to `data/structures`. 
+ - `model_chimera.py` reads inputs from `parsed.json` and `.pdb` files from `data/structures` to produce `chimera.pdb`. 
+ - Finally, `design_clone.py` infers plasmid design from `chimera.pdb`.
 
 ## Project Context
 
